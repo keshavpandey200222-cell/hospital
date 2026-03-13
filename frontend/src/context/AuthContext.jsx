@@ -41,7 +41,11 @@ export const AuthProvider = ({ children }) => {
         return true;
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      if (!err.response) {
+        setError("Network error: Could not reach backend. Check your VITE_API_URL and CORS settings.");
+      } else {
+        setError(err.response?.data?.message || 'Login failed');
+      }
       return false;
     } finally {
       setLoading(false);
@@ -60,7 +64,11 @@ export const AuthProvider = ({ children }) => {
         return true;
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      if (!err.response) {
+        setError("Network error: Could not reach backend. Check your VITE_API_URL and CORS settings.");
+      } else {
+        setError(err.response?.data?.message || 'Registration failed');
+      }
       return false;
     } finally {
       setLoading(false);

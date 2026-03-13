@@ -14,20 +14,24 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Enable CORS for frontend
-frontend_url = os.environ.get('FRONTEND_URL', '*')
+frontend_url = os.environ.get('FRONTEND_URL')
 # In production, we need specific origins for credentials. 
-# We'll allow the configured frontend URL and some defaults.
-allowed_origins = [frontend_url, "http://localhost:5173", "http://127.0.0.1:5173"]
-# Remove trailing slashes from allowed origins to match browser behavior
-allowed_origins = [url.rstrip('/') for url in allowed_origins if url]
+allowed_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+if frontend_url:
+    allowed_origins.append(frontend_url.rstrip('/'))
 
+# If FRONTEND_URL is not set, we'll allow all origins BUT WITHOUT credentials.
+# However, since we NEED credentials for cookies, we must ensure it's set.
 CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
 
+from flask import request
 @app.before_request
 def log_request_info():
     if os.environ.get('RENDER'):
         origin = request.headers.get('Origin')
-        print(f"DEBUG: Request to {request.path} from Origin: {origin}")
+        # Only log if it's an API request
+        if request.path.startswith('/api'):
+            print(f"DEBUG: API Request {request.method} {request.path} from Origin: {origin}")
 
 # Secure cookies for production when using Vercel + Render (cross-site)
 if os.environ.get('RENDER'):
@@ -77,7 +81,8 @@ def health():
     return jsonify({
         "status": "healthy",
         "env": "production" if os.environ.get('RENDER') else "development",
-        "frontend_configured": os.environ.get('FRONTEND_URL', 'Not Set')
+        "frontend_allowed": allowed_origins,
+        "database": str(app.config['SQLALCHEMY_DATABASE_URI']).split('///')[-1]
     })
 
 @app.route('/', defaults={'path': ''})
