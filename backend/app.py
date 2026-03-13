@@ -13,8 +13,16 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-i
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///hms.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Enable CORS for frontend running on localhost:5173
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}}, supports_credentials=True)
+# Enable CORS for frontend
+frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+CORS(app, resources={r"/api/*": {"origins": [frontend_url, "http://localhost:5173", "http://127.0.0.1:5173"]}}, supports_credentials=True)
+
+# Secure cookies for production when using Vercel + Render (cross-site)
+if os.environ.get('RENDER'):
+    app.config.update(
+        SESSION_COOKIE_SAMESITE='None',
+        SESSION_COOKIE_SECURE=True,
+    )
 
 # Initialize Plugins
 db.init_app(app)
