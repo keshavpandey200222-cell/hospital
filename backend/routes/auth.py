@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
@@ -49,7 +50,14 @@ def register():
 
     response = jsonify(success=True, user=new_user.to_dict())
     # Setting httpOnly cookie
-    response.set_cookie('token', token, httponly=True, secure=False, samesite='Lax')
+    is_prod = os.environ.get('RENDER')
+    response.set_cookie(
+        'token', 
+        token, 
+        httponly=True, 
+        secure=True if is_prod else False, 
+        samesite='None' if is_prod else 'Lax'
+    )
     return response
 
 @auth_bp.route('/login', methods=['POST'])
@@ -72,7 +80,14 @@ def login():
     }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
     response = jsonify(success=True, user=user.to_dict())
-    response.set_cookie('token', token, httponly=True, secure=False, samesite='Lax')
+    is_prod = os.environ.get('RENDER')
+    response.set_cookie(
+        'token', 
+        token, 
+        httponly=True, 
+        secure=True if is_prod else False, 
+        samesite='None' if is_prod else 'Lax'
+    )
     return response
 
 @auth_bp.route('/me', methods=['GET'])
