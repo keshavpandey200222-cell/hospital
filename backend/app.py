@@ -14,8 +14,20 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Enable CORS for frontend
-frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
-CORS(app, resources={r"/api/*": {"origins": [frontend_url, "http://localhost:5173", "http://127.0.0.1:5173"]}}, supports_credentials=True)
+frontend_url = os.environ.get('FRONTEND_URL', '*')
+# In production, we need specific origins for credentials. 
+# We'll allow the configured frontend URL and some defaults.
+allowed_origins = [frontend_url, "http://localhost:5173", "http://127.0.0.1:5173"]
+# Remove trailing slashes from allowed origins to match browser behavior
+allowed_origins = [url.rstrip('/') for url in allowed_origins if url]
+
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
+
+@app.before_request
+def log_request_info():
+    if os.environ.get('RENDER'):
+        origin = request.headers.get('Origin')
+        print(f"DEBUG: Request to {request.path} from Origin: {origin}")
 
 # Secure cookies for production when using Vercel + Render (cross-site)
 if os.environ.get('RENDER'):
@@ -60,9 +72,19 @@ with app.app_context():
         db.session.commit()
         print("Doctor account created: doctor@example.com / password123")
 
+@app.route('/api/health')
+def health():
+    return jsonify({
+        "status": "healthy",
+        "env": "production" if os.environ.get('RENDER') else "development",
+        "frontend_configured": os.environ.get('FRONTEND_URL', 'Not Set')
+    })
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
+    if path.startswith('api/'):
+        return jsonify(success=False, message=f"API route not found: /api/{path[4:]}"), 404
     return jsonify({"message": "HMS API is running. Use /api/* endpoints."})
 
 @app.errorhandler(404)

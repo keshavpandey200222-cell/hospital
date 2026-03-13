@@ -2,7 +2,12 @@ import axios from 'axios';
 
 // Get backend URL from env, or default to port 5000 (standard backend dev port)
 // IMPORTANT: In production, set VITE_API_URL to your Render/Railway URL (e.g. https://hms-api.onrender.com/api)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Robust URL handling: ensure it ends with /api even if user forgot to add it
+let baseEnvUrl = import.meta.env.VITE_API_URL || '';
+if (baseEnvUrl && !baseEnvUrl.endsWith('/api')) {
+  baseEnvUrl = baseEnvUrl.endsWith('/') ? `${baseEnvUrl}api` : `${baseEnvUrl}/api`;
+}
+const API_URL = baseEnvUrl || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
